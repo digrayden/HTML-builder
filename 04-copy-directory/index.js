@@ -1,14 +1,25 @@
 const fs = require('fs');
 const path = require('path');
+
 const srcDirectory = path.join(__dirname, 'files');
 const destDirectory = path.join(__dirname, 'files-copy');
+
 fs.promises
-  .mkdir(destDirectory, { recursive: true })
+  .readdir(destDirectory)
+  .then((files) => {
+    const deletePromises = files.map((file) => {
+      const filePath = path.join(destDirectory, file);
+      return fs.promises.unlink(filePath);
+    });
+    return Promise.all(deletePromises);
+  })
+  .then(() => fs.promises.mkdir(destDirectory, { recursive: true }))
   .then(() => fs.promises.readdir(srcDirectory, { withFileTypes: true }))
   .then((entries) => {
     const promises = entries.map((entry) => {
       const pathSrc = path.join(srcDirectory, entry.name);
       const pathDest = path.join(destDirectory, entry.name);
+
       if (entry.isDirectory()) {
         return fs.promises
           .mkdir(pathDest, { recursive: true })
@@ -17,6 +28,7 @@ fs.promises
             const promisesSub = subEntries.map((subEntry) => {
               const pathSrcSub = path.join(pathSrc, subEntry.name);
               const pathDestSub = path.join(pathDest, subEntry.name);
+
               if (subEntry.isDirectory()) {
                 return fs.promises.mkdir(pathDestSub, { recursive: true });
               } else {
